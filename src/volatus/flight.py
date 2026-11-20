@@ -86,7 +86,7 @@ class Flight:
     def series(self, topic: str, field: str, instance: int = 0) -> Series | None:
         for d in self.ulog.data_list:
             if d.name == topic and d.multi_id == instance and field in d.data:
-                # A few topics carry samples stamped just before the log start; pin them to 0.
+                # Some samples are stamped just before the log start; pin them to 0.
                 t = np.maximum(d.data["timestamp"].astype(np.int64) - self.t0, 0) / 1e6
                 return Series(t, d.data[field].astype(np.float64))
         return None
@@ -109,7 +109,7 @@ class Flight:
     def messages(self) -> list[Message]:
         # A string message with a trailing tab duplicates an event; skip those like Flight Review does.
         return [
-            Message((m.timestamp - self.t0) / 1e6, m.log_level_str(), m.message.strip())
+            Message(max(m.timestamp - self.t0, 0) / 1e6, m.log_level_str(), m.message.strip())
             for m in self.ulog.logged_messages
             if m.message and not m.message.endswith("\t")
         ]
