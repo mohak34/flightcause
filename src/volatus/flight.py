@@ -86,7 +86,8 @@ class Flight:
     def series(self, topic: str, field: str, instance: int = 0) -> Series | None:
         for d in self.ulog.data_list:
             if d.name == topic and d.multi_id == instance and field in d.data:
-                t = (d.data["timestamp"].astype(np.int64) - self.t0) / 1e6
+                # A few topics carry samples stamped just before the log start; pin them to 0.
+                t = np.maximum(d.data["timestamp"].astype(np.int64) - self.t0, 0) / 1e6
                 return Series(t, d.data[field].astype(np.float64))
         return None
 

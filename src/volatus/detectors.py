@@ -54,14 +54,15 @@ def battery(f: Flight) -> list[Finding]:
     if not air.any() or v.v[air].max() < 3.0:
         return []
     cells = f.series("battery_status", "cell_count")
-    n = int(cells.v.max()) if cells is not None and cells.v.max() > 0 else 0
-    if n == 0:
-        n = max(1, round(v.v[air].max() / 4.1))
+    n = int(cells.v.max()) if cells is not None else 0
+    if not 3.4 <= v.v[air].max() / max(n, 1) <= 4.45:
+        # cell_count is often left at a wrong default; infer it from the in-flight peak voltage instead.
+        n = max(1, round(v.v[air].max() / 4.0))
     cell = v.v / n
     sig = ("battery_status/voltage_v", "battery_status/current_a")
     out: list[Finding] = []
 
-    for a, b in spans(v.t, air & (cell < 3.3) & (v.v > 1.0), min_s=1.0):
+    for a, b in spans(v.t, air & (cell < 3.3) & (v.v > 1.0), min_s=1.0, gap_s=30.0):
         w = v.window(a, b)
         out.append(
             Finding(
@@ -90,7 +91,7 @@ def battery(f: Flight) -> list[Finding]:
                 Finding(
                     f.log_id,
                     "battery_sag",
-                    "critical" if drop[i] > 0.5 else "warning",
+                    "warning",  # sag under load is common in good flights too; it is context, not a verdict
                     a,
                     b,
                     f"Battery voltage sagged {drop[i]:.2f} V/cell ({roll_max[i]:.1f} -> {v.v[i]:.1f} V) within 5 s"
@@ -102,43 +103,47 @@ def battery(f: Flight) -> list[Finding]:
 
     warn = f.series("battery_status", "warning")
     if warn is not None:
-        names = {1: "low", 2: "critical", 3: "emergency", 4: "failed"}
-        for level in (2, 3, 4):
-            hit = f.armed_at(warn.t) & (warn.v >= level) & (np.r_[0, warn.v[:-1]] < level)
-            for t in warn.t[hit][:1]:
-                out.append(
-                    Finding(
-                        f.log_id,
-                        "battery_warning",
-                        "critical",
-                        float(t),
-                        float(t),
-                        f"PX4 raised battery warning '{names[level]}'",
-                        {"warning_level": names[level]},
-                        sig,
-                    )
+        names = {2: "critical", 3: "emergency", 4: "failed"}
+        on = f.armed_at(warn.t) & (warn.v >= 2)
+        # First time each level is reached; the level flickers between values near the threshold.
+        levels, first = np.unique(warn.v[on].astype(int), return_index=True)
+        for t, level in zip(warn.t[on][first], levels):
+            name = names.get(level, str(level))
+            out.append(
+                Finding(
+                    f.log_id,
+                    "battery_warning",
+                    "critical",
+                    float(t),
+                    float(t),
+                    f"PX4 raised battery warning '{name}'",
+                    {"warning_level": name},
+                    sig,
                 )
+            )
     return out
 
 
+ROTORS = {2: 4, 13: 6, 14: 8, 15: 3}  # vehicle_status.system_type (MAV_TYPE) -> motor count
+
+
 def _motor_outputs(f: Flight) -> tuple[list[Series], float, float, str] | None:
-    """Motor commands and their [min, max] range. Prefers normalized actuator_motors (PX4 >= 1.13)."""
+    """Motor commands and their [min, max] range. Prefers normalized actuator_motors (PX4 >= 1.13).
+
+    Mixers put motors on the first outputs, so only the first n channels are read, n from the airframe type.
+    """
+    st = f.series("vehicle_status", "system_type")
+    n = ROTORS.get(int(st.v[-1]), 4) if st is not None else 4
     if f.series("actuator_motors", "control[0]") is not None:
-        ms = [s for i in range(12) if (s := f.series("actuator_motors", f"control[{i}]")) is not None]
-        ms = [s for s in ms if np.isfinite(s.v).any() and np.nanmax(s.v) > 0.05]
-        return (ms, 0.0, 1.0, "actuator_motors/control") if ms else None
-    n_out = f.series("actuator_outputs", "noutputs")
-    if n_out is None:
+        ms = [s for i in range(n) if (s := f.series("actuator_motors", f"control[{i}]")) is not None]
+        return (ms, 0.0, 1.0, "actuator_motors/control") if len(ms) == n else None
+    ms = [s for i in range(n) if (s := f.series("actuator_outputs", f"output[{i}]")) is not None]
+    # PWM motor channels idle above ~900 us while armed; anything else means this is not a PWM motor layout.
+    if len(ms) < n or any(np.percentile(s.v, 95) < 1100 or s.v.max() > 2200 for s in ms):
         return None
-    ms = []
-    for i in range(min(8, int(n_out.v.max()))):
-        s = f.series("actuator_outputs", f"output[{i}]")
-        # Motor channels idle above ~900 us while armed; servos and unused channels do not vary like that.
-        if s is not None and np.percentile(s.v, 95) > 1100 and s.v.max() <= 2200:
-            ms.append(s)
     pmax = f.param("PWM_MAIN_MAX", f.param("PWM_MAX", 2000.0))
     pmin = f.param("PWM_MAIN_MIN", f.param("PWM_MIN", 1000.0))
-    return (ms, pmin, pmax, "actuator_outputs/output") if len(ms) >= 4 else None
+    return ms, pmin, pmax, "actuator_outputs/output"
 
 
 def motor_saturation(f: Flight) -> list[Finding]:
@@ -162,7 +167,7 @@ def motor_saturation(f: Flight) -> list[Finding]:
             Finding(
                 f.log_id,
                 "motor_saturation",
-                "critical" if b - a >= 1.0 or split else "warning",
+                "critical" if b - a >= 2.0 else "warning",
                 a,
                 b,
                 f"Motor {worst + 1} saturated at max output for {b - a:.1f} s"
@@ -245,14 +250,19 @@ VIB_RMS_WARN = 4.0
 
 
 def impact(f: Flight) -> list[Finding]:
-    """Hard impacts (accel spike > 4 g while armed) and PX4's free-fall flag."""
+    """Hard impacts (50 ms mean accel > 5 g while armed) and PX4's free-fall flag.
+
+    Averaging over 50 ms ignores single-sample vibration spikes, which reach 20 g in good flights.
+    """
     out: list[Finding] = []
     xs = [s for i in range(3) if (s := f.series("sensor_combined", f"accelerometer_m_s2[{i}]")) is not None]
     if len(xs) == 3:
         t = xs[0].t
-        norm = np.sqrt(sum(x.v**2 for x in xs))
+        raw = np.sqrt(sum(x.v**2 for x in xs))
+        w = max(1, int(0.05 / (float(np.median(np.diff(t))) or 0.004)))
+        norm = np.convolve(raw, np.ones(w) / w, "same")
         armed = f.armed_at(t)
-        for a, b in spans(t, armed & (norm > 4 * G), gap_s=3.0):
+        for a, b in spans(t, armed & (norm > 5 * G), gap_s=3.0):
             peak = float(norm[(t >= a) & (t <= b)].max())
             out.append(
                 Finding(
@@ -261,7 +271,7 @@ def impact(f: Flight) -> list[Finding]:
                     "critical",
                     a,
                     b,
-                    f"Acceleration spike of {peak / G:.1f} g while armed (impact or crash)",
+                    f"Acceleration of {peak / G:.1f} g (50 ms mean) while armed: impact or crash",
                     {"peak_g": _r(peak / G, 1)},
                     ("sensor_combined/accelerometer_m_s2[2]", "vehicle_local_position/z"),
                 )
@@ -309,7 +319,7 @@ def _setpoint_euler(f: Flight, t: np.ndarray) -> tuple[np.ndarray, np.ndarray] |
 
 
 def attitude(f: Flight) -> list[Finding]:
-    """Attitude not tracking its setpoint (>20 deg for 0.5 s) and extreme tilt (>60 deg: flip)."""
+    """Attitude not tracking its setpoint (>30 deg for 0.5 s) and extreme tilt (>60 deg: flip)."""
     e = euler(f)
     if e is None:
         return []
@@ -321,13 +331,13 @@ def attitude(f: Flight) -> list[Finding]:
     sp = _setpoint_euler(f, t)
     if sp is not None:
         err = np.hypot(roll - sp[0], pitch - sp[1])
-        for a, b in spans(t, air & (err > 20), min_s=0.5, gap_s=0.5):
+        for a, b in spans(t, air & (err > 30), min_s=0.5, gap_s=0.5):
             peak = float(err[(t >= a) & (t <= b)].max())
             out.append(
                 Finding(
                     f.log_id,
                     "attitude_error",
-                    "critical" if peak > 45 else "warning",
+                    "critical" if peak > 60 and b - a >= 1.0 else "warning",
                     a,
                     b,
                     f"Attitude diverged from setpoint by up to {peak:.0f} deg for {b - a:.1f} s",
@@ -416,7 +426,7 @@ def estimator(f: Flight) -> list[Finding]:
                 Finding(
                     f.log_id,
                     "estimator",
-                    "critical",
+                    "warning",
                     a,
                     b,
                     "EKF reported internal filter faults",
@@ -432,15 +442,15 @@ def failsafe(f: Flight) -> list[Finding]:
     out: list[Finding] = []
     nav = f.series("vehicle_status", "nav_state")
     checks: tuple[tuple[str, str, str, Severity], ...] = (
-        ("failsafe", "failsafe", "Failsafe triggered", "critical"),
-        ("rc_signal_lost", "rc_loss", "RC signal lost", "critical"),
+        ("failsafe", "failsafe", "Failsafe triggered", "warning"),
+        ("rc_signal_lost", "rc_loss", "RC signal lost", "warning"),
         ("data_link_lost", "datalink_loss", "Ground station data link lost", "warning"),
     )
     for fld, kind, text, sev in checks:
         s = f.series("vehicle_status", fld)
         if s is None:
             continue
-        for a, b in spans(s.t, f.armed_at(s.t) & (s.v > 0.5), gap_s=0.5):
+        for a, b in spans(s.t, f.in_air_at(s.t) & (s.v > 0.5), gap_s=0.5):
             mode = NAV_STATES.get(int(nav.at(a)), "?") if nav is not None else "?"
             out.append(
                 Finding(
