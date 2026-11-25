@@ -1,7 +1,7 @@
 [project]
 name = "volatus"
 version = "0.1.0"
-description = "Add your description here"
+description = "Ask questions about PX4 drone flight logs and get cited answers."
 readme = "README.md"
 authors = [
     { name = "mohak34", email = "mohaks0408@gmail.com" }
