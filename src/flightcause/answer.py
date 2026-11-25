@@ -1,7 +1,7 @@
 """The only LLM step: write an answer from retrieved findings, citing them as [F1], [F2], ...
 
 Any OpenAI-compatible chat endpoint works. Configure with environment variables:
-VOLATUS_LLM_BASE_URL, VOLATUS_LLM_API_KEY, VOLATUS_LLM_MODEL.
+FLIGHTCAUSE_LLM_BASE_URL, FLIGHTCAUSE_LLM_API_KEY, FLIGHTCAUSE_LLM_MODEL.
 """
 
 import os
@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from volatus.index import Hit
+from flightcause.index import Hit
 
 # (system prompt, user prompt) -> completion text
 LLM = Callable[[str, str], str]
@@ -72,10 +72,10 @@ def answer(question: str, hits: list[Hit], llm: LLM | None) -> Answer:
 
 
 def llm_from_env() -> LLM | None:
-    """An OpenAI-compatible chat client, or None when VOLATUS_LLM_API_KEY is not set."""
-    key = os.environ.get("VOLATUS_LLM_API_KEY")
-    base = os.environ.get("VOLATUS_LLM_BASE_URL", "https://api.groq.com/openai/v1").rstrip("/")
-    model = os.environ.get("VOLATUS_LLM_MODEL", "openai/gpt-oss-20b")
+    """An OpenAI-compatible chat client, or None when FLIGHTCAUSE_LLM_API_KEY is not set."""
+    key = os.environ.get("FLIGHTCAUSE_LLM_API_KEY")
+    base = os.environ.get("FLIGHTCAUSE_LLM_BASE_URL", "https://api.groq.com/openai/v1").rstrip("/")
+    model = os.environ.get("FLIGHTCAUSE_LLM_MODEL", "openai/gpt-oss-20b")
     if not key:
         return None
 

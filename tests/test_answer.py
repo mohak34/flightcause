@@ -1,7 +1,7 @@
 from conftest import CRASH
 
-from volatus.answer import answer
-from volatus.index import Index
+from flightcause.answer import answer
+from flightcause.index import Index
 
 
 def test_answer_keeps_only_citations_of_retrieved_findings(index: Index) -> None:

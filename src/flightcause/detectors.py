@@ -9,7 +9,7 @@ from typing import Literal
 
 import numpy as np
 
-from volatus.flight import NAV_STATES, Flight, Series, clock, spans
+from flightcause.flight import NAV_STATES, Flight, Series, clock, spans
 
 Severity = Literal["info", "warning", "critical"]
 G = 9.81

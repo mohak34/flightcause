@@ -1,5 +1,5 @@
 [project]
-name = "volatus"
+name = "flightcause"
 version = "0.1.0"
 description = "Ask questions about PX4 drone flight logs and get cited answers."
 readme = "README.md"
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-volatus = "volatus:main"
+flightcause = "flightcause:main"
 
 [build-system]
 requires = ["uv_build>=0.12.11,<0.13.0"]

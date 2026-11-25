@@ -2,8 +2,8 @@
 
 from conftest import CRASH, NORMAL
 
-from volatus.detectors import Finding
-from volatus.index import CRASH_KINDS, first_crash
+from flightcause.detectors import Finding
+from flightcause.index import CRASH_KINDS, first_crash
 
 
 def kinds(fs: list[Finding], severity: str | None = None) -> set[str]:

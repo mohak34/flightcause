@@ -8,8 +8,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from volatus.detectors import Finding, euler
-from volatus.flight import Flight, Series, clock
+from flightcause.detectors import Finding, euler
+from flightcause.flight import Flight, Series, clock
 
 PAD_S = 10.0
 BG, INK, MUTED, GRID = "#000000", "#f0efec", "#c3c2b7", "#2a2a28"

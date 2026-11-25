@@ -7,8 +7,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from volatus.answer import llm_from_env
-from volatus.engine import Engine
+from flightcause.answer import llm_from_env
+from flightcause.engine import Engine
 
 
 class AskRequest(BaseModel):
@@ -23,7 +23,7 @@ def _finding(h: Any) -> dict[str, Any]:
 
 
 def create_app(engine: Engine) -> FastAPI:
-    app = FastAPI(title="volatus")
+    app = FastAPI(title="flightcause")
 
     def resolve(log_id: str) -> str:
         full = engine.resolve(log_id)

@@ -1,6 +1,6 @@
 """Wires detectors, index, plots and the answer step to a data directory.
 
-Layout: <data>/logs/*.ulg, <data>/manifest.json (Flight Review metadata), <data>/volatus.db, <data>/plots/.
+Layout: <data>/logs/*.ulg, <data>/manifest.json (Flight Review metadata), <data>/flightcause.db, <data>/plots/.
 """
 
 import json
@@ -8,11 +8,11 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from volatus.answer import LLM, Answer, answer
-from volatus.detectors import Finding, scan
-from volatus.flight import Flight
-from volatus.index import Index
-from volatus.plots import plot_finding
+from flightcause.answer import LLM, Answer, answer
+from flightcause.detectors import Finding, scan
+from flightcause.flight import Flight
+from flightcause.index import Index
+from flightcause.plots import plot_finding
 
 MAX_PLOTS = 6
 
@@ -22,7 +22,7 @@ class Engine:
         self.data = data_dir
         self.logs_dir = data_dir / "logs"
         self.plots_dir = data_dir / "plots"
-        self.index = Index(data_dir / "volatus.db")
+        self.index = Index(data_dir / "flightcause.db")
 
     def manifest(self) -> dict[str, dict[str, Any]]:
         p = self.data / "manifest.json"

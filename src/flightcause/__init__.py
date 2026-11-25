@@ -2,6 +2,6 @@
 
 
 def main() -> None:
-    from volatus.cli import main as cli
+    from flightcause.cli import main as cli
 
     raise SystemExit(cli())
