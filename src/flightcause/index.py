@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from volatus.detectors import Finding
+from flightcause.detectors import Finding
 
 KEYWORDS = {
     "battery_low": "battery voltage low empty depleted power cell",

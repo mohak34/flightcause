@@ -1,6 +1,6 @@
 from conftest import CRASH, NORMAL
 
-from volatus.index import CRASH_KINDS, Index
+from flightcause.index import CRASH_KINDS, Index
 
 
 def test_question_about_one_log_pulls_the_matching_moment(index: Index) -> None:

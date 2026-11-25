@@ -1,6 +1,6 @@
-# volatus
+# FlightCause
 
-Find out why a drone crashed. Volatus reads [PX4](https://px4.io) flight logs (PX4 is an open source autopilot), finds what went wrong and when, and answers questions about it:
+Find out why a drone crashed. FlightCause reads [PX4](https://px4.io) flight logs (PX4 is an open source autopilot), finds what went wrong and when, and answers questions about it:
 
 - "why did this drone crash?"
 - "when did the battery start sagging?"
@@ -17,7 +17,7 @@ The command line tool and HTTP API work today. The dashboard above is a [design 
 One real crash, where the pilot wrote "Ended with prop retention failure" (a propeller came off). Shortened:
 
 ```console
-$ uv run volatus findings 5e002593
+$ uv run flightcause findings 5e002593
   0:04.1-0:19.1  critical vibration         Accel vibration metric reached 26.4 m/s^2 (Flight Review: >4.9 marginal, >9.8 bad)
   0:08.0-0:09.6  warning  battery_sag       Battery voltage sagged 0.48 V/cell (12.1 -> 10.7 V) within 5 s at 2 A
   0:09.0-0:20.2  warning  failsafe          Failsafe triggered (mode at onset: Stabilized)
@@ -34,18 +34,18 @@ $ uv run volatus findings 5e002593
 Needs Python 3.14 and [uv](https://docs.astral.sh/uv/).
 
 ```sh
-git clone https://github.com/mohak34/volatus
-cd volatus
+git clone https://github.com/mohak34/flightcause
+cd flightcause
 uv sync
-uv run volatus download -n 10    # 10 crash and 10 normal flights
-uv run volatus scan              # run the detectors, build data/volatus.db
-uv run volatus logs              # list the flights and their ids
-uv run volatus findings <id>     # what happened in one of them
+uv run flightcause download -n 10    # 10 crash and 10 normal flights
+uv run flightcause scan              # run the detectors, build data/flightcause.db
+uv run flightcause logs              # list the flights and their ids
+uv run flightcause findings <id>     # what happened in one of them
 ```
 
 The evaluation below uses `download -n 150`: 300 logs, about 2.7 GB. The download waits 2 s between files and skips files over 80 MB.
 
-To use your own log, pass the file: `uv run volatus scan path/to/flight.ulg`. Plots are only drawn for logs inside `data/logs`, so copy it there first if you want them.
+To use your own log, pass the file: `uv run flightcause scan path/to/flight.ulg`. Plots are only drawn for logs inside `data/logs`, so copy it there first if you want them.
 
 ### Written answers
 
@@ -53,20 +53,20 @@ Findings, search, plots and the API work without a language model. To get writte
 
 | Variable | Default |
 |---|---|
-| `VOLATUS_LLM_API_KEY` | none, so no written answer |
-| `VOLATUS_LLM_BASE_URL` | `https://api.groq.com/openai/v1` |
-| `VOLATUS_LLM_MODEL` | `openai/gpt-oss-20b` |
+| `FLIGHTCAUSE_LLM_API_KEY` | none, so no written answer |
+| `FLIGHTCAUSE_LLM_BASE_URL` | `https://api.groq.com/openai/v1` |
+| `FLIGHTCAUSE_LLM_MODEL` | `openai/gpt-oss-20b` |
 
 For Gemini:
 
 ```sh
-export VOLATUS_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-export VOLATUS_LLM_MODEL=gemini-3-flash-preview
+export FLIGHTCAUSE_LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+export FLIGHTCAUSE_LLM_MODEL=gemini-3-flash-preview
 ```
 
 ## Commands
 
-Run each with `uv run volatus`. An id can be shortened to its first 8 characters.
+Run each with `uv run flightcause`. An id can be shortened to its first 8 characters.
 
 | Command | What it does |
 |---|---|
@@ -78,7 +78,7 @@ Run each with `uv run volatus`. An id can be shortened to its first 8 characters
 | `eval` | Print the evaluation tables |
 | `serve --port 8000` | HTTP API on 127.0.0.1 |
 
-Everything is stored in `./data`. Change it with `--data DIR` before the command, or `VOLATUS_DATA`.
+Everything is stored in `./data`. Change it with `--data DIR` before the command, or `FLIGHTCAUSE_DATA`.
 
 ## API
 

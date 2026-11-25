@@ -1,6 +1,6 @@
 """Cut small real-log fixtures out of downloaded Flight Review logs.
 
-Run from the repo root after `volatus download`:  uv run python tests/make_fixtures.py
+Run from the repo root after `flightcause download`:  uv run python tests/make_fixtures.py
 Each fixture keeps only the topics the detectors read, inside a time window (seconds since log start).
 """
 
@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 from pyulog import ULog
 
-from volatus.flight import TOPICS
+from flightcause.flight import TOPICS
 
 # name: (log id, start s, end s, reason it was picked)
 FIXTURES = {

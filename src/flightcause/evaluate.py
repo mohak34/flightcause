@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from volatus.index import CRASH_KINDS, Index
+from flightcause.index import CRASH_KINDS, Index
 
 
 @dataclass(frozen=True)
@@ -39,7 +39,7 @@ def report(index: Index) -> str:
         for r in index.db.execute("select log_id, rating from logs where rating in ('crash_sw_hw', 'crash_pilot', 'good', 'great')")
     }
     if not labels:
-        return "No rated logs indexed. Run `volatus download` and `volatus scan` first."
+        return "No rated logs indexed. Run `flightcause download` and `flightcause scan` first."
     rows = list(index.db.execute("select log_id, kind, severity from findings where severity != 'info'"))
     crash_pred = {r[0] for r in rows if r[1] in CRASH_KINDS}
     critical_pred = {r[0] for r in rows if r[2] == "critical"}

@@ -1,17 +1,17 @@
-"""volatus command line: download, scan, logs, findings, ask, eval, serve."""
+"""flightcause command line: download, scan, logs, findings, ask, eval, serve."""
 
 import argparse
 import os
 import sys
 from pathlib import Path
 
-from volatus.answer import llm_from_env
-from volatus.engine import Engine
+from flightcause.answer import llm_from_env
+from flightcause.engine import Engine
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="volatus", description="Ask questions about PX4 flight logs.")
-    p.add_argument("--data", type=Path, default=Path(os.environ.get("VOLATUS_DATA", "data")), help="data directory (default ./data)")
+    p = argparse.ArgumentParser(prog="flightcause", description="Ask questions about PX4 flight logs.")
+    p.add_argument("--data", type=Path, default=Path(os.environ.get("FLIGHTCAUSE_DATA", "data")), help="data directory (default ./data)")
     sub = p.add_subparsers(dest="cmd", required=True)
     d = sub.add_parser("download", help="download a labeled crash/normal sample from Flight Review")
     d.add_argument("-n", type=int, default=150, help="logs per class")
@@ -35,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
 
     match args.cmd:
         case "download":
-            from volatus.download import download, fetch_dbinfo, select
+            from flightcause.download import download, fetch_dbinfo, select
 
             download(select(fetch_dbinfo(), args.n), args.data, args.delay)
         case "scan":
@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         case "findings":
             log_id = engine.resolve(args.log)
             if log_id is None:
-                print(f"unknown log {args.log}; run `volatus scan` first", file=sys.stderr)
+                print(f"unknown log {args.log}; run `flightcause scan` first", file=sys.stderr)
                 return 1
             for x in engine.index.findings(log_id):
                 if args.all or x.severity != "info":
@@ -74,15 +74,15 @@ def main(argv: list[str] | None = None) -> int:
                 if result.dropped_citations:
                     print(f"\n(removed citations to findings that were not retrieved: {', '.join(result.dropped_citations)})")
             else:
-                print("No LLM configured (set VOLATUS_LLM_API_KEY). The findings above are the retrieved evidence.")
+                print("No LLM configured (set FLIGHTCAUSE_LLM_API_KEY). The findings above are the retrieved evidence.")
         case "eval":
-            from volatus.evaluate import report
+            from flightcause.evaluate import report
 
             print(report(engine.index))
         case "serve":
             import uvicorn
 
-            from volatus.api import create_app
+            from flightcause.api import create_app
 
             uvicorn.run(create_app(engine), host="127.0.0.1", port=args.port)
     return 0

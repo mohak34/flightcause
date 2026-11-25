@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from volatus.detectors import Finding, scan
-from volatus.flight import Flight
-from volatus.index import Index
+from flightcause.detectors import Finding, scan
+from flightcause.flight import Flight
+from flightcause.index import Index
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CRASH = "crash_prop_failure"
