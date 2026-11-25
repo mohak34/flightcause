@@ -91,3 +91,7 @@ Reading the numbers:
 - Ratings are user labels. Some "crash" uploads end before the impact is logged, and some "good" flights include hard landings.
 - 53 of 150 crash logs show no crash sign at all. These are the detectors' misses; the per-kind table shows what still fires in them.
 - Battery sag, PX4 messages and RC loss fire as often in good flights as in crashes. They are context for an answer, not crash predictors, so they are warnings, not critical.
+
+## Design
+
+`design/dashboard.html` is a clickable mock of the dashboard. Open it in a browser. It shows 92 crash logs, but Ask and Upload are scripted.
